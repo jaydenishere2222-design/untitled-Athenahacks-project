@@ -1,0 +1,236 @@
+from dotenv import load_dotenv
+load_dotenv()
+
+"""
+Fatigue Detection Server
+========================
+Architecture:
+  - Presage SDK runs as a background thread, reading directly from the webcam
+  - Flask exposes /api/state for the browser to poll every 2 seconds
+  - Results are saved to MongoDB Atlas
+  - LLM advice fetched from Claude when a bad state is detected
+
+Presage SDK requirements:
+  - Ubuntu 22.04 / Mint 21 only (amd64)
+  - Install: sudo apt install libsmartspectra-dev
+  - API key: https://physiology.presagetech.com
+
+Run:
+  pip install flask flask-cors pymongo anthropic
+  export SMARTSPECTRA_API_KEY=your_presage_key
+  export MONGO_URI=mongodb+srv://...
+  export ANTHROPIC_API_KEY=your_claude_key
+  python server.py
+"""
+
+from flask import Flask, jsonify
+from flask_cors import CORS
+from pymongo import MongoClient
+from datetime import datetime
+import threading
+import time
+import os
+
+app = Flask(__name__)
+CORS(app)
+
+# ── Config (set these as environment variables) ───────────────────────────────
+MONGO_URI            = os.getenv("MONGO_URI", "[https://mongodb+srv://liangxue_c:a858c2tzOtMlDXYZ@cluster0.8ogmkvl.mongodb.net/?appName=Cluster0](https://mongodb+srv://liangxue_c:a858c2tzOtMlDXYZ@cluster0.8ogmkvl.mongodb.net/?appName=Cluster0)")
+SMARTSPECTRA_API_KEY = os.getenv("SMARTSPECTRA_API_KEY", "")
+ANTHROPIC_API_KEY    = os.getenv("ANTHROPIC_API_KEY", "")
+OPERATOR_ID          = "driver_1"
+
+# ── MongoDB ───────────────────────────────────────────────────────────────────
+client     = MongoClient(MONGO_URI)
+db         = client["fatigue_detector"]
+collection = db["detections"]
+print("Connected to MongoDB Atlas")
+
+# ── Shared state (Presage thread writes, Flask reads) ─────────────────────────
+latest      = {
+    "pulse_bpm":       None,
+    "breathing_bpm":   None,
+    "state":           "normal",
+    "alert_triggered": False,
+    "advice":          None,
+    "updated_at":      None,
+}
+latest_lock = threading.Lock()
+
+# ── State classifier ──────────────────────────────────────────────────────────
+def classify_state(pulse_bpm, breathing_bpm):
+    """
+    Rules based on normal resting ranges:
+      pulse:     60-100 bpm normal. >100 = stress/anxiety.
+      breathing: 12-20 bpm normal. <10 = drowsy. >25 = stressed.
+    Tune these thresholds once you have real labelled data.
+    """
+    if pulse_bpm is None or breathing_bpm is None:
+        return "normal"
+    if pulse_bpm > 100 and breathing_bpm > 22:
+        return "stressed"
+    if pulse_bpm > 100:
+        return "anxious"
+    if breathing_bpm < 10 and pulse_bpm < 65:
+        return "drowsy"
+    return "normal"
+
+
+# ── LLM advice via Claude ─────────────────────────────────────────────────────
+def get_llm_advice(state, pulse_bpm, breathing_bpm):
+    if not ANTHROPIC_API_KEY:
+        return fallback_advice(state)
+    try:
+        import anthropic
+        ai = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
+        msg = ai.messages.create(
+            model="claude-sonnet-4-20250514",
+            max_tokens=80,
+            messages=[{
+                "role": "user",
+                "content": (
+                    f"You are a fatigue safety advisor for a professional driver. "
+                    f"State: {state}. Pulse: {pulse_bpm} BPM. Breathing: {breathing_bpm} BPM. "
+                    f"Give one short calm actionable sentence of advice, max 25 words."
+                )
+            }]
+        )
+        return msg.content[0].text.strip()
+    except Exception as e:
+        print(f"LLM error: {e}")
+        return fallback_advice(state)
+
+
+def fallback_advice(state):
+    return {
+        "drowsy":   "You appear drowsy — pull over safely and rest for 10 minutes.",
+        "stressed": "High stress detected — take three slow deep breaths before continuing.",
+        "anxious":  "Elevated anxiety — reduce speed and take a short break soon.",
+    }.get(state, None)
+
+
+# ── Presage background thread ─────────────────────────────────────────────────
+def presage_thread():
+    """
+    Runs Presage SmartSpectra SDK continuously, writing vitals into `latest`.
+
+    Currently runs in SIMULATION mode.
+    To switch to real Presage data:
+      1. sudo apt install libsmartspectra-dev
+      2. pip install smartspectra
+      3. Delete the SIMULATION block below
+      4. Uncomment the REAL PRESAGE block
+    """
+
+    # ── SIMULATION MODE (delete when Presage SDK is installed) ───────────────
+    print("Running in SIMULATION mode — install Presage SDK for real vitals")
+    import random
+    consecutive_bad = 0
+
+    while True:
+        pulse_bpm     = round(random.uniform(58, 115))
+        breathing_bpm = round(random.uniform(8, 28))
+        state         = classify_state(pulse_bpm, breathing_bpm)
+
+        consecutive_bad = consecutive_bad + 1 if state != "normal" else 0
+        alert  = consecutive_bad >= 3
+        advice = get_llm_advice(state, pulse_bpm, breathing_bpm) if alert else None
+
+        _save(pulse_bpm, breathing_bpm, state, alert, advice)
+        time.sleep(2)
+    # ── END SIMULATION ────────────────────────────────────────────────────────
+
+
+    # ── REAL PRESAGE (uncomment when SDK is installed) ────────────────────────
+    # import smartspectra
+    #
+    # consecutive_bad = 0
+    # last_pulse      = None
+    # last_breathing  = None
+    #
+    # def on_metrics(metrics, timestamp):
+    #     nonlocal consecutive_bad, last_pulse, last_breathing
+    #
+    #     # Presage returns rolling buffers — take the latest value
+    #     pulse_bpm     = metrics.pulse.rate[-1].value     if metrics.pulse.rate     else last_pulse
+    #     breathing_bpm = metrics.breathing.rate[-1].value if metrics.breathing.rate else last_breathing
+    #     last_pulse, last_breathing = pulse_bpm, breathing_bpm
+    #
+    #     if pulse_bpm is None:
+    #         return
+    #
+    #     state = classify_state(pulse_bpm, breathing_bpm)
+    #     consecutive_bad = consecutive_bad + 1 if state != "normal" else 0
+    #     alert  = consecutive_bad >= 3
+    #     advice = get_llm_advice(state, pulse_bpm, breathing_bpm) if alert else None
+    #     _save(pulse_bpm, breathing_bpm, state, alert, advice)
+    #
+    # container = smartspectra.ContinuousContainer(
+    #     api_key = SMARTSPECTRA_API_KEY,
+    #     on_metrics = on_metrics,
+    # )
+    # container.run()   # blocks — callbacks fire as vitals arrive
+    # ── END REAL PRESAGE ──────────────────────────────────────────────────────
+
+
+def _save(pulse_bpm, breathing_bpm, state, alert, advice):
+    """Write to shared state dict and save a record to MongoDB."""
+    now = datetime.utcnow()
+
+    with latest_lock:
+        latest.update({
+            "pulse_bpm":       pulse_bpm,
+            "breathing_bpm":   breathing_bpm,
+            "state":           state,
+            "alert_triggered": alert,
+            "advice":          advice,
+            "updated_at":      now.isoformat(),
+        })
+
+    collection.insert_one({
+        "timestamp":       now,
+        "operator_id":     OPERATOR_ID,
+        "state":           state,
+        "signals": {
+            "pulse_bpm":     pulse_bpm,
+            "breathing_bpm": breathing_bpm,
+        },
+        "alert_triggered": alert,
+        "advice":          advice,
+    })
+
+    print(f"pulse={pulse_bpm}  breathing={breathing_bpm}  state={state}  alert={alert}")
+
+
+# ── Flask routes ──────────────────────────────────────────────────────────────
+@app.route("/api/state", methods=["GET"])
+def get_state():
+    """Browser polls this every 2 seconds."""
+    with latest_lock:
+        return jsonify(latest.copy())
+
+
+@app.route("/api/detections", methods=["GET"])
+def get_detections():
+    """Last 20 records for the supervisor dashboard."""
+    results = list(
+        collection.find({}, {"_id": 0})
+        .sort("timestamp", -1)
+        .limit(20)
+    )
+    for r in results:
+        r["timestamp"] = r["timestamp"].isoformat()
+    return jsonify(results)
+
+
+@app.route("/health", methods=["GET"])
+def health():
+    return jsonify({"status": "ok"})
+
+
+# ── Start ─────────────────────────────────────────────────────────────────────
+if __name__ == "__main__":
+    t = threading.Thread(target=presage_thread, daemon=True)
+    t.start()
+    print("Presage thread started")
+    app.run(port=5000, debug=False)   # debug must be False when using threads

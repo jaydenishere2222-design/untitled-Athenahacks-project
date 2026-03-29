@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Facial Detector</title>
+  <script type="module" src="/main.js"></script>
+  <!--<script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision/vision_bundle.mjs"
+          crossorigin="anonymous"></script>-->
+  <style>
+    body {
+      margin: 0;
+      background: #000000;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+
+    .video-wrapper {
+      position: relative;
+      display: inline-block;
+    }
+
+    #webcam {
+      display: block;
+      width: 640px;
+      height: 480px;
+      border-radius: 8px;
+    }
+
+    #overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 640px;
+      height: 480px;
+    }
+
+    #status {
+      color: #fff;
+      font-family: sans-serif;
+      font-size: 14px;
+      text-align: center;
+      margin-top: 12px;
+      opacity: 0.7;
+    }
+  </style>
+</head>
+<body>
+
+  <div>
+    <div class="video-wrapper">
+      <video id="webcam" autoplay playsinline></video>
+      <canvas id="overlay"></canvas>
+    </div>
+    <p id="status">Starting camera...</p>
+  </div>
+
+  <script>
+    const video = document.getElementById('webcam');
+    const status = document.getElementById('status');
+
+    navigator.mediaDevices.getUserMedia({ video: true })
+      .then(stream => {
+        video.srcObject = stream;
+        status.textContent = 'Camera ready. Loading models...';
+      })
+      .catch(error => {
+        console.error('Error accessing webcam:', error);
+        status.textContent = 'Could not access camera.';
+      });
+  </script>
+
+</body>
+</html>

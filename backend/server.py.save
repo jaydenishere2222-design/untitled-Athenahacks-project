@@ -111,39 +111,30 @@ def fallback_advice(state):
 
 # ── Presage background thread ─────────────────────────────────────────────────
 def presage_thread():
-    import subprocess
-    import json
+    """
+    Runs Presage SmartSpectra SDK continuously, writing vitals into `latest`.
 
-    binary = os.path.join(os.path.dirname(__file__), "..", "presage_bridge")
-    binary = os.path.abspath(binary)
+      1. sudo apt install libsmartspectra-dev
+      2. pip install smartspectra
+      3. Delete the SIMULATION block below
+      4. Uncomment the REAL PRESAGE block
 
+    # ── SIMULATION MODE (delete when Presage SDK is installed) ───────────────
+    print("Running in SIMULATION mode — install Presage SDK for real vitals")
+    import random
     consecutive_bad = 0
 
-    print(f"Starting presage_bridge binary: {binary}")
-    proc = subprocess.Popen(
-        [binary],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        env={**os.environ, "SMARTSPECTRA_API_KEY": SMARTSPECTRA_API_KEY},
-        text=True
-    )
+    while True:
+        pulse_bpm     = round(random.uniform(58, 115))
+        breathing_bpm = round(random.uniform(8, 28))
+        state         = classify_state(pulse_bpm, breathing_bpm)
 
-    for line in proc.stdout:
-        line = line.strip()
-        if not line.startswith("{"):
-            continue
-        try:
-            data = json.loads(line)
-            pulse_bpm     = data.get("pulse")
-            breathing_bpm = data.get("breathing")
-        except json.JSONDecodeError:
-            continue
-
-        state = classify_state(pulse_bpm, breathing_bpm)
         consecutive_bad = consecutive_bad + 1 if state != "normal" else 0
         alert  = consecutive_bad >= 3
         advice = get_llm_advice(state, pulse_bpm, breathing_bpm) if alert else None
+
         _save(pulse_bpm, breathing_bpm, state, alert, advice)
+        time.sleep(2)
     # ── END SIMULATION ────────────────────────────────────────────────────────
 
 

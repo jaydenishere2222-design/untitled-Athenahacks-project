@@ -1,0 +1,912 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Alertify</title>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --pink: #e8c8e8;
+    --pink-dark: #d4a8d4;
+    --pink-light: #f0d8f0;
+    --white: #ffffff;
+    --black: #111111;
+    --card-bg: rgba(255,255,255,0.85);
+    --shadow: 0 4px 24px rgba(0,0,0,0.08);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--pink);
+    color: var(--black);
+    min-height: 100vh;
+  }
+
+  /* ── PAGES ── */
+  .page { display: none; min-height: 100vh; flex-direction: column; }
+  .page.active { display: flex; }
+
+  /* ── NAV ── */
+  nav {
+    background: white;
+    display: flex;
+    align-items: center;
+    padding: 14px 40px;
+    gap: 16px;
+    border-bottom: 1px solid #eee;
+    position: sticky; top: 0; z-index: 100;
+  }
+  .logo {
+    display: flex; align-items: center; gap: 10px;
+    font-weight: 700; font-size: 1.1rem; cursor: pointer;
+    text-decoration: none; color: var(--black);
+  }
+  .logo svg { width: 40px; height: 40px; }
+  nav .nav-links { margin-left: auto; display: flex; gap: 32px; align-items: center; }
+  nav .nav-links a {
+    text-decoration: none; color: var(--black);
+    font-size: 0.95rem; cursor: pointer;
+  }
+  nav .nav-links a:hover { text-decoration: underline; }
+  .search-box {
+    display: flex; align-items: center;
+    border: 1px solid #ddd; border-radius: 6px;
+    padding: 6px 12px; gap: 6px; font-size: 0.85rem; color: #888;
+  }
+
+  /* ── HERO BG ── */
+  .hero-bg {
+    background: var(--pink);
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero-bg::before {
+    content: '';
+    position: absolute; inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400'%3E%3Cg fill='none' stroke='rgba(255,255,255,0.5)' stroke-width='1.5'%3E%3Cellipse cx='80' cy='80' rx='60' ry='40'/%3E%3Cellipse cx='80' cy='80' rx='30' ry='20'/%3E%3Cellipse cx='320' cy='60' rx='50' ry='35'/%3E%3Cellipse cx='50' cy='300' rx='70' ry='50'/%3E%3Cellipse cx='350' cy='320' rx='55' ry='40'/%3E%3Cpath d='M80 60 Q100 40 120 60 Q100 80 80 60Z'/%3E%3Cpath d='M320 40 Q340 20 360 40 Q340 60 320 40Z'/%3E%3C/g%3E%3C/svg%3E");
+    background-size: cover;
+    pointer-events: none;
+  }
+
+  /* ── HOME PAGE ── */
+  .home-hero {
+    text-align: center;
+    padding: 80px 40px 60px;
+    position: relative; z-index: 1;
+  }
+  .home-hero h1 { font-size: 2.6rem; font-weight: 800; margin-bottom: 12px; }
+  .home-hero p { font-size: 1.1rem; color: #444; margin-bottom: 28px; }
+  .btn-primary {
+    background: var(--black); color: white;
+    border: none; border-radius: 8px;
+    padding: 14px 40px; font-size: 1rem;
+    font-family: 'DM Sans', sans-serif;
+    cursor: pointer; font-weight: 600;
+    transition: transform 0.15s, box-shadow 0.15s;
+  }
+  .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,0.2); }
+
+  .home-bottom {
+    display: flex; gap: 32px;
+    padding: 0 60px 60px;
+    position: relative; z-index: 1;
+    align-items: flex-start;
+  }
+  .choose-label { font-size: 2rem; font-weight: 800; margin-bottom: 24px; }
+  .desc-card {
+    background: white; border-radius: 16px;
+    padding: 32px; max-width: 340px;
+    box-shadow: var(--shadow);
+    font-size: 0.95rem; line-height: 1.65; color: #333;
+  }
+  .mode-cards { display: flex; flex-direction: column; gap: 16px; flex: 1; }
+  .mode-card {
+    background: white; border-radius: 16px;
+    padding: 20px 24px;
+    display: flex; align-items: center; gap: 20px;
+    box-shadow: var(--shadow);
+    cursor: pointer;
+    transition: transform 0.15s, box-shadow 0.15s;
+  }
+  .mode-card:hover { transform: translateY(-2px); box-shadow: 0 8px 28px rgba(0,0,0,0.12); }
+  .mode-icon {
+    width: 60px; height: 60px; border-radius: 50%;
+    background: #ddd;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; font-size: 1.5rem;
+  }
+  .mode-card h3 { font-size: 1.1rem; font-weight: 700; margin-bottom: 4px; }
+  .mode-card p { font-size: 0.85rem; color: #555; margin-bottom: 8px; }
+  .tags { display: flex; gap: 6px; }
+  .tag {
+    background: #f0f0f0; border-radius: 4px;
+    padding: 2px 8px; font-size: 0.75rem; color: #555;
+  }
+
+  /* ── ROLE SELECT PAGE ── */
+  .role-page {
+    background: var(--pink);
+    flex: 1; display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 60px; position: relative; overflow: hidden;
+    padding: 60px 40px;
+  }
+  .role-page h1 {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 2.2rem; text-align: center;
+    line-height: 1.4;
+  }
+  .role-circles { display: flex; gap: 40px; }
+  .role-circle {
+    width: 200px; height: 200px; border-radius: 50%;
+    background: rgba(255,255,255,0.9);
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 0.9rem; text-align: center;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+  }
+  .role-circle:hover {
+    transform: scale(1.06);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+  }
+
+  /* ── DRIVER PAGE ── */
+  .dashboard-layout {
+    display: grid; grid-template-columns: 1fr 380px;
+    gap: 24px; padding: 32px 40px;
+    flex: 1; position: relative; z-index: 1;
+  }
+  .face-scan-card {
+    background: white; border-radius: 16px;
+    overflow: hidden; aspect-ratio: 4/3;
+    display: flex; align-items: center; justify-content: center;
+    position: relative; box-shadow: var(--shadow);
+  }
+  .face-scan-img {
+    width: 100%; height: 100%; object-fit: cover;
+    background: linear-gradient(135deg, #f5f0f5, #e8e0e8);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .face-svg { width: 220px; height: 260px; }
+
+  .stats-card {
+    background: white; border-radius: 16px;
+    padding: 24px; margin-top: 16px;
+    box-shadow: var(--shadow);
+  }
+  .stats-card h3 { font-size: 0.8rem; font-weight: 700; letter-spacing: 0.05em; margin-bottom: 4px; }
+  .stats-card p { font-size: 0.75rem; color: #888; margin-bottom: 16px; }
+  .stats-row { display: flex; gap: 12px; margin-bottom: 16px; }
+  .stat-box {
+    flex: 1; background: #f8f5f8; border-radius: 10px;
+    padding: 14px 16px;
+  }
+  .stat-box label { font-size: 0.72rem; color: #888; display: block; margin-bottom: 6px; }
+  .stat-box .val { font-size: 1.3rem; font-weight: 700; }
+  .stat-box .delta { font-size: 0.72rem; color: #888; margin-top: 2px; }
+  .alert-row { display: flex; justify-content: space-between; align-items: center; padding-top: 12px; border-top: 1px solid #eee; }
+  .alert-row label { font-size: 0.75rem; color: #888; }
+  .alert-row span { font-size: 1.1rem; font-weight: 700; }
+
+  /* right panel */
+  .right-panel { display: flex; flex-direction: column; gap: 16px; }
+  .info-card {
+    background: white; border-radius: 16px;
+    padding: 20px 24px; box-shadow: var(--shadow);
+    display: flex; align-items: center; gap: 16px;
+  }
+  .info-card .ic-icon { font-size: 2rem; flex-shrink: 0; }
+  .info-card h4 { font-size: 0.85rem; color: #888; margin-bottom: 4px; }
+  .info-card .ic-val { font-size: 1.4rem; font-weight: 800; }
+  .info-card.warning { background: #fff5f5; }
+  .info-card.warning .ic-val { color: #c0392b; }
+  .stop-icon {
+    width: 48px; height: 48px; background: #c0392b;
+    border-radius: 50%; display: flex; align-items: center;
+    justify-content: center; color: white; font-size: 1.2rem;
+    flex-shrink: 0;
+  }
+  .spotify-icon {
+    width: 48px; height: 48px; background: #1DB954;
+    border-radius: 12px; display: flex; align-items: center;
+    justify-content: center; font-size: 1.4rem; flex-shrink: 0;
+  }
+  .card-badge {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 0.7rem; color: #888; margin-bottom: 8px;
+  }
+  .card-badge::before {
+    content: '✦'; font-size: 0.7rem; color: #a070c0;
+  }
+
+  /* ── STUDENT PAGE ── */
+  .student-layout {
+    display: grid; grid-template-columns: 1fr 300px;
+    gap: 24px; padding: 32px 40px;
+    flex: 1; position: relative; z-index: 1;
+  }
+  .tips-card {
+    background: white; border-radius: 16px;
+    padding: 24px; box-shadow: var(--shadow);
+  }
+  .tips-card h3 { font-size: 1rem; font-weight: 700; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+  .tip-highlight {
+    background: #f8f0f8; border-radius: 10px;
+    padding: 16px; margin-bottom: 16px; text-align: center;
+  }
+  .tip-highlight p { font-size: 0.8rem; color: #888; margin-bottom: 4px; }
+  .tip-highlight .big { font-size: 1.5rem; font-weight: 800; }
+  .tip-item {
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px 0; border-bottom: 1px solid #f0f0f0;
+  }
+  .tip-item:last-child { border-bottom: none; }
+  .tip-item .tip-icon { font-size: 1.3rem; }
+  .tip-item span { font-size: 0.9rem; font-weight: 500; }
+
+  .timer-card {
+    background: white; border-radius: 16px;
+    padding: 24px; margin-top: 16px;
+    box-shadow: var(--shadow);
+  }
+  .timer-card h3 { font-weight: 700; font-size: 1rem; }
+  .timer-card p { font-size: 0.75rem; color: #888; margin-bottom: 16px; }
+  .timer-row { display: flex; gap: 12px; margin-bottom: 20px; }
+  .timer-box {
+    flex: 1; background: #f8f5f8; border-radius: 10px;
+    padding: 14px 16px;
+  }
+  .timer-box label { font-size: 0.72rem; color: #888; display: block; margin-bottom: 6px; }
+  .timer-box .val { font-size: 1.3rem; font-weight: 700; }
+  .timer-box .delta { font-size: 0.72rem; color: #888; }
+  .timer-right { flex: 1; }
+  .set-timer-label { font-size: 0.8rem; font-weight: 600; margin-bottom: 8px; }
+  .timer-input {
+    width: 100%; border: 1px solid #ddd; border-radius: 8px;
+    padding: 10px 14px; font-family: 'DM Sans', sans-serif;
+    font-size: 0.9rem; margin-bottom: 4px;
+  }
+  .hint { font-size: 0.72rem; color: #888; margin-bottom: 12px; }
+  .btn-outline {
+    width: 100%; border: 1.5px solid #333; background: white;
+    border-radius: 8px; padding: 10px;
+    font-family: 'DM Sans', sans-serif; font-size: 0.85rem;
+    cursor: pointer; margin-bottom: 8px; font-weight: 600;
+    transition: background 0.15s;
+  }
+  .btn-outline:hover { background: #f5f5f5; }
+  .btn-black {
+    width: 100%; border: none; background: var(--black); color: white;
+    border-radius: 8px; padding: 12px;
+    font-family: 'DM Sans', sans-serif; font-size: 0.85rem;
+    cursor: pointer; font-weight: 600;
+    transition: opacity 0.15s;
+  }
+  .btn-black:hover { opacity: 0.85; }
+
+  /* ── PATIENT PAGE ── */
+  .patient-layout {
+    display: grid; grid-template-columns: 1fr 420px;
+    gap: 24px; padding: 32px 40px;
+    flex: 1; position: relative; z-index: 1;
+  }
+  .ecg-card {
+    background: #000a1a; border-radius: 16px;
+    padding: 20px; box-shadow: var(--shadow);
+    font-family: monospace;
+  }
+  .ecg-header { display: flex; justify-content: space-between; margin-bottom: 12px; }
+  .ecg-label { font-size: 0.65rem; color: #aaa; }
+  .ecg-val { font-size: 0.65rem; }
+  .ecg-line {
+    height: 40px; border-bottom: 1px solid #1a2a3a;
+    margin-bottom: 8px; position: relative; overflow: hidden;
+  }
+  .ecg-wave {
+    position: absolute; bottom: 0; left: 0;
+    width: 200%; height: 100%;
+    animation: wave 2s linear infinite;
+  }
+  @keyframes wave {
+    from { transform: translateX(0); }
+    to { transform: translateX(-50%); }
+  }
+  .ecg-nums {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 8px; margin-top: 8px;
+  }
+  .ecg-num { text-align: right; }
+  .ecg-num .label { font-size: 0.6rem; color: #aaa; }
+  .ecg-num .num { font-size: 1.4rem; font-weight: 800; }
+  .ecg-num.green .num { color: #00ff41; }
+  .ecg-num.cyan .num { color: #00e5ff; }
+  .ecg-num.yellow .num { color: #ffe600; }
+  .ecg-num.orange .num { color: #ff6b00; }
+
+  .metrics-card {
+    background: white; border-radius: 16px;
+    padding: 24px; margin-top: 16px;
+    box-shadow: var(--shadow);
+  }
+  .metrics-card h3 { font-weight: 700; }
+  .metrics-card p { font-size: 0.75rem; color: #888; margin-bottom: 16px; }
+  .metrics-row { display: flex; gap: 12px; }
+  .metric-box {
+    flex: 1; background: #f8f5f8; border-radius: 10px;
+    padding: 14px 16px;
+  }
+  .metric-box label { font-size: 0.72rem; color: #888; display: block; margin-bottom: 6px; }
+  .metric-box .val { font-size: 1.2rem; font-weight: 700; }
+  .metric-box .delta { font-size: 0.72rem; color: #888; }
+
+  .chart-card {
+    background: white; border-radius: 16px;
+    padding: 20px; flex: 1;
+    box-shadow: var(--shadow);
+  }
+  .chart-card h4 { font-weight: 700; margin-bottom: 4px; }
+  .chart-card p { font-size: 0.75rem; color: #888; margin-bottom: 16px; }
+  .chart-area {
+    height: 100px; position: relative;
+  }
+  .chart-area svg { width: 100%; height: 100%; }
+
+  .nurse-card {
+    background: white; border-radius: 16px;
+    padding: 20px 24px;
+    display: flex; align-items: center; gap: 16px;
+    box-shadow: var(--shadow);
+  }
+  .nurse-icon {
+    width: 52px; height: 52px; border-radius: 50%;
+    border: 2px solid #333;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.3rem; flex-shrink: 0;
+  }
+  .nurse-card h4 { font-size: 1rem; font-weight: 800; line-height: 1.3; }
+
+  /* ── MODAL ── */
+  .modal-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,0.3); z-index: 500;
+    align-items: center; justify-content: center;
+  }
+  .modal-overlay.active { display: flex; }
+  .modal {
+    background: var(--pink); border-radius: 20px;
+    padding: 40px 36px; max-width: 440px; width: 90%;
+    position: relative; box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+    animation: modalIn 0.25s ease;
+  }
+  @keyframes modalIn {
+    from { transform: scale(0.9); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+  }
+  .modal-close {
+    position: absolute; top: 16px; right: 20px;
+    background: none; border: none;
+    font-size: 1.1rem; cursor: pointer; color: #555;
+    display: flex; gap: 16px;
+  }
+  .modal-close span { cursor: pointer; }
+  .modal-bell { text-align: center; font-size: 2rem; margin-bottom: 16px; }
+  .modal h2 { text-align: center; font-size: 1.5rem; font-weight: 800; margin-bottom: 12px; }
+  .modal p { text-align: center; color: #555; font-size: 0.9rem; margin-bottom: 28px; }
+  .modal-btns { display: flex; gap: 12px; }
+  .modal-btn {
+    flex: 1; padding: 14px; border-radius: 10px;
+    font-family: 'DM Sans', sans-serif; font-size: 0.9rem;
+    font-weight: 600; cursor: pointer;
+    transition: transform 0.15s;
+  }
+  .modal-btn:hover { transform: translateY(-1px); }
+  .modal-btn.outline { background: white; border: 1.5px solid #ccc; }
+  .modal-btn.filled { background: white; border: 1.5px solid #bbb; }
+
+  /* ── FOOTER ── */
+  footer {
+    background: white; text-align: center;
+    padding: 20px; font-size: 0.82rem; color: #888;
+    display: flex; justify-content: center; gap: 40px;
+    border-top: 1px solid #eee;
+  }
+  footer a { color: #888; text-decoration: none; }
+  footer a:hover { text-decoration: underline; }
+
+  /* breadcrumb label */
+  .page-label {
+    font-size: 0.75rem; color: #aaa;
+    padding: 8px 40px 0;
+  }
+</style>
+</head>
+<body>
+
+<!-- ══════════════════ HOME PAGE ══════════════════ -->
+<div class="page active" id="page-home">
+  <nav>
+    <a class="logo" onclick="showPage('page-home')">
+      <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <ellipse cx="20" cy="20" rx="18" ry="12" stroke="black" stroke-width="2"/>
+        <circle cx="20" cy="20" r="5" fill="black"/>
+        <path d="M14 26 Q20 32 26 26" stroke="black" stroke-width="1.5" fill="none"/>
+      </svg>
+      Alertify
+    </a>
+    <div class="nav-links">
+      <a onclick="showPage('page-home')">Home</a>
+      <a href="#">About Us</a>
+      <a href="#">Contact</a>
+      <div class="search-box">
+        <span>Search in site</span>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#888" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      </div>
+    </div>
+  </nav>
+
+  <div class="hero-bg">
+    <div class="home-hero">
+      <h1>Welcome to Alertify!</h1>
+      <p>A Vision that cares</p>
+      <button class="btn-primary" onclick="showPage('page-role')">Get Started</button>
+    </div>
+
+    <div class="home-bottom">
+      <div style="flex: 0 0 auto;">
+        <div class="choose-label">Choose your mode</div>
+        <div class="desc-card">
+          Alertify is an intelligent, non-contact health companion designed to bridge the gap between productivity and wellness. Thru transforming any standard webcam into a medical-grade sensor, allowing users to monitor their vital signs without wearing a single device.
+        </div>
+      </div>
+
+      <div class="mode-cards">
+        <div class="mode-card" onclick="showPage('page-student')">
+          <div class="mode-icon">🎓</div>
+          <div>
+            <h3>Student</h3>
+            <p>Productivity focused for the students. Friendly reminder options for the peak performance.</p>
+            <div class="tags"><span class="tag">New</span><span class="tag">Featured</span></div>
+          </div>
+        </div>
+        <div class="mode-card" onclick="showPage('page-driver')">
+          <div class="mode-icon">🚗</div>
+          <div>
+            <h3>Driver</h3>
+            <p>Safety first! Stay on track without dozing off a sec!</p>
+          </div>
+        </div>
+        <div class="mode-card" onclick="showPage('page-patient')">
+          <div class="mode-icon">🏥</div>
+          <div>
+            <h3>Patient</h3>
+            <p>Prioritizing Recovery through monitoring over slightest movements.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <span>© 2026 Our Home</span>
+    <a href="#">Privacy Policy</a>
+    <a href="#">Terms of Service</a>
+  </footer>
+</div>
+
+<!-- ══════════════════ ROLE SELECT PAGE ══════════════════ -->
+<div class="page" id="page-role">
+  <nav>
+    <a class="logo" onclick="showPage('page-home')">
+      <svg viewBox="0 0 40 40" fill="none"><ellipse cx="20" cy="20" rx="18" ry="12" stroke="black" stroke-width="2"/><circle cx="20" cy="20" r="5" fill="black"/><path d="M14 26 Q20 32 26 26" stroke="black" stroke-width="1.5" fill="none"/></svg>
+      Alertify
+    </a>
+    <div class="nav-links">
+      <a onclick="showPage('page-home')">Home</a>
+      <a href="#">About Us</a>
+      <a href="#">Contact</a>
+      <div class="search-box"><span>Search in site</span></div>
+    </div>
+  </nav>
+  <div class="hero-bg">
+    <div class="role-page">
+      <h1>Select your role</h1>
+      <div class="role-circles">
+        <div class="role-circle" onclick="showPage('page-student')">Student</div>
+        <div class="role-circle" onclick="showPage('page-driver')">Driver</div>
+        <div class="role-circle" onclick="showPage('page-patient')">Patient</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════ DRIVER PAGE ══════════════════ -->
+<div class="page" id="page-driver">
+  <div class="page-label">Alertify/driver</div>
+  <nav>
+    <a class="logo" onclick="showPage('page-home')">
+      <svg viewBox="0 0 40 40" fill="none"><ellipse cx="20" cy="20" rx="18" ry="12" stroke="black" stroke-width="2"/><circle cx="20" cy="20" r="5" fill="black"/><path d="M14 26 Q20 32 26 26" stroke="black" stroke-width="1.5" fill="none"/></svg>
+      Alertify/driver
+    </a>
+    <div class="nav-links">
+      <a onclick="showPage('page-home')">Home</a>
+      <a href="#">About Us</a>
+      <a href="#">Contact</a>
+      <div class="search-box"><span>Search in site</span></div>
+    </div>
+  </nav>
+  <div class="hero-bg">
+    <div class="dashboard-layout">
+      <!-- LEFT -->
+      <div>
+        <div class="face-scan-card">
+          <div class="face-scan-img">
+            <svg class="face-svg" viewBox="0 0 220 280" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <!-- scan corners -->
+              <path d="M20 60 L20 20 L60 20" stroke="#333" stroke-width="3" stroke-linecap="round"/>
+              <path d="M160 20 L200 20 L200 60" stroke="#333" stroke-width="3" stroke-linecap="round"/>
+              <path d="M20 220 L20 260 L60 260" stroke="#333" stroke-width="3" stroke-linecap="round"/>
+              <path d="M160 260 L200 260 L200 220" stroke="#333" stroke-width="3" stroke-linecap="round"/>
+              <!-- head -->
+              <ellipse cx="110" cy="100" rx="55" ry="65" fill="#c8843c"/>
+              <ellipse cx="110" cy="80" rx="45" ry="50" fill="#3d2410"/>
+              <!-- face mesh dots -->
+              <circle cx="110" cy="95" r="3" fill="white"/>
+              <circle cx="90" cy="105" r="2.5" fill="white"/>
+              <circle cx="130" cy="105" r="2.5" fill="white"/>
+              <circle cx="100" cy="120" r="2.5" fill="white"/>
+              <circle cx="120" cy="120" r="2.5" fill="white"/>
+              <circle cx="110" cy="130" r="2.5" fill="white"/>
+              <circle cx="85" cy="130" r="2.5" fill="white"/>
+              <circle cx="135" cy="130" r="2.5" fill="white"/>
+              <circle cx="95" cy="145" r="2.5" fill="white"/>
+              <circle cx="125" cy="145" r="2.5" fill="white"/>
+              <circle cx="110" cy="155" r="2.5" fill="white"/>
+              <!-- mesh lines -->
+              <line x1="110" y1="95" x2="90" y2="105" stroke="white" stroke-width="1" opacity="0.7"/>
+              <line x1="110" y1="95" x2="130" y2="105" stroke="white" stroke-width="1" opacity="0.7"/>
+              <line x1="90" y1="105" x2="100" y2="120" stroke="white" stroke-width="1" opacity="0.7"/>
+              <line x1="130" y1="105" x2="120" y2="120" stroke="white" stroke-width="1" opacity="0.7"/>
+              <line x1="100" y1="120" x2="110" y2="130" stroke="white" stroke-width="1" opacity="0.7"/>
+              <line x1="120" y1="120" x2="110" y2="130" stroke="white" stroke-width="1" opacity="0.7"/>
+              <line x1="110" y1="130" x2="85" y2="130" stroke="white" stroke-width="1" opacity="0.7"/>
+              <line x1="110" y1="130" x2="135" y2="130" stroke="white" stroke-width="1" opacity="0.7"/>
+              <line x1="85" y1="130" x2="95" y2="145" stroke="white" stroke-width="1" opacity="0.7"/>
+              <line x1="135" y1="130" x2="125" y2="145" stroke="white" stroke-width="1" opacity="0.7"/>
+              <line x1="95" y1="145" x2="110" y2="155" stroke="white" stroke-width="1" opacity="0.7"/>
+              <line x1="125" y1="145" x2="110" y2="155" stroke="white" stroke-width="1" opacity="0.7"/>
+              <!-- body -->
+              <rect x="70" y="180" width="80" height="80" rx="8" fill="#e07830"/>
+            </svg>
+          </div>
+        </div>
+
+        <div class="stats-card">
+          <h3>HIGH STRESS SAFETY</h3>
+          <p>Monitor your progress</p>
+          <div class="stats-row">
+            <div class="stat-box">
+              <label>Head Nods</label>
+              <div class="val">0/5</div>
+              <div class="delta">+2</div>
+            </div>
+            <div class="stat-box">
+              <label>Heart Rate</label>
+              <div class="val">72 bpm</div>
+              <div class="delta">-1</div>
+            </div>
+            <div class="stat-box">
+              <label>Breathing</label>
+              <div class="val">14 bpm</div>
+              <div class="delta">+5</div>
+            </div>
+          </div>
+          <div class="alert-row">
+            <label>Alert Today</label>
+            <span>0</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT -->
+      <div class="right-panel">
+        <div class="info-card">
+          <div class="ic-icon">📍</div>
+          <div>
+            <h4>Destination ETA</h4>
+            <div class="ic-val">1 hr 30 min</div>
+          </div>
+        </div>
+
+        <div class="info-card warning">
+          <div class="stop-icon">✋</div>
+          <div>
+            <h4>Finding nearby stop</h4>
+            <div class="ic-val">Rerouting...</div>
+          </div>
+        </div>
+
+        <div class="info-card">
+          <div class="spotify-icon">🎵</div>
+          <div>
+            <div class="card-badge">C...</div>
+            <div class="ic-val" style="font-size:1.1rem">Play upbeat music</div>
+          </div>
+        </div>
+
+        <button class="btn-primary" style="margin-top:auto" onclick="showModal()">Trigger Alert Demo</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════ STUDENT PAGE ══════════════════ -->
+<div class="page" id="page-student">
+  <div class="page-label">Alertify/student</div>
+  <nav>
+    <a class="logo" onclick="showPage('page-home')">
+      <svg viewBox="0 0 40 40" fill="none"><ellipse cx="20" cy="20" rx="18" ry="12" stroke="black" stroke-width="2"/><circle cx="20" cy="20" r="5" fill="black"/><path d="M14 26 Q20 32 26 26" stroke="black" stroke-width="1.5" fill="none"/></svg>
+      Alertify/student
+    </a>
+    <div class="nav-links">
+      <a onclick="showPage('page-home')">Home</a>
+      <a href="#">About Us</a>
+      <a href="#">Contact</a>
+      <div class="search-box"><span>Search in site</span></div>
+    </div>
+  </nav>
+  <div class="hero-bg">
+    <div class="student-layout">
+      <!-- LEFT -->
+      <div>
+        <div class="face-scan-card" style="max-width:600px">
+          <div class="face-scan-img">
+            <svg class="face-svg" viewBox="0 0 220 280" fill="none">
+              <path d="M20 60 L20 20 L60 20" stroke="#c0392b" stroke-width="3" stroke-linecap="round"/>
+              <path d="M160 20 L200 20 L200 60" stroke="#c0392b" stroke-width="3" stroke-linecap="round"/>
+              <path d="M20 220 L20 260 L60 260" stroke="#c0392b" stroke-width="3" stroke-linecap="round"/>
+              <path d="M160 260 L200 260 L200 220" stroke="#c0392b" stroke-width="3" stroke-linecap="round"/>
+              <ellipse cx="110" cy="100" rx="55" ry="65" fill="#c8843c"/>
+              <ellipse cx="110" cy="80" rx="45" ry="50" fill="#3d2410"/>
+              <circle cx="110" cy="95" r="3" fill="white"/><circle cx="90" cy="105" r="2.5" fill="white"/>
+              <circle cx="130" cy="105" r="2.5" fill="white"/><circle cx="100" cy="120" r="2.5" fill="white"/>
+              <circle cx="120" cy="120" r="2.5" fill="white"/><circle cx="110" cy="130" r="2.5" fill="white"/>
+              <circle cx="85" cy="130" r="2.5" fill="white"/><circle cx="135" cy="130" r="2.5" fill="white"/>
+              <circle cx="95" cy="145" r="2.5" fill="white"/><circle cx="125" cy="145" r="2.5" fill="white"/>
+              <circle cx="110" cy="155" r="2.5" fill="white"/>
+              <line x1="110" y1="95" x2="90" y2="105" stroke="white" stroke-width="1" opacity="0.7"/>
+              <line x1="110" y1="95" x2="130" y2="105" stroke="white" stroke-width="1" opacity="0.7"/>
+              <line x1="90" y1="105" x2="100" y2="120" stroke="white" stroke-width="1" opacity="0.7"/>
+              <line x1="130" y1="105" x2="120" y2="120" stroke="white" stroke-width="1" opacity="0.7"/>
+              <line x1="100" y1="120" x2="110" y2="130" stroke="white" stroke-width="1" opacity="0.7"/>
+              <line x1="120" y1="120" x2="110" y2="130" stroke="white" stroke-width="1" opacity="0.7"/>
+              <line x1="110" y1="130" x2="95" y2="145" stroke="white" stroke-width="1" opacity="0.7"/>
+              <line x1="110" y1="130" x2="125" y2="145" stroke="white" stroke-width="1" opacity="0.7"/>
+              <line x1="95" y1="145" x2="110" y2="155" stroke="white" stroke-width="1" opacity="0.7"/>
+              <line x1="125" y1="145" x2="110" y2="155" stroke="white" stroke-width="1" opacity="0.7"/>
+              <rect x="70" y="180" width="80" height="80" rx="8" fill="#e07830"/>
+            </svg>
+          </div>
+        </div>
+
+        <div class="timer-card">
+          <div style="display:flex; gap:24px;">
+            <div style="flex:1">
+              <h3>Timer Status</h3>
+              <p>Current Rest Duration</p>
+              <div class="timer-row">
+                <div class="timer-box">
+                  <label>Elapsed Time</label>
+                  <div class="val">15 min</div>
+                  <div class="delta">+5 min</div>
+                </div>
+                <div class="timer-box">
+                  <label>Total Time</label>
+                  <div class="val">30 min</div>
+                </div>
+              </div>
+            </div>
+            <div class="timer-right" style="flex:1">
+              <div class="set-timer-label">Set Timer</div>
+              <input class="timer-input" type="text" placeholder="Enter minutes">
+              <div class="hint">Max 60 minutes</div>
+              <button class="btn-outline">Reset Timer</button>
+              <button class="btn-outline">Pause Timer</button>
+              <button class="btn-black">Start Timer</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT -->
+      <div class="tips-card">
+        <h3>⊞ Quick Tips</h3>
+        <div class="tip-highlight">
+          <p>Don't resist it! Listen to your body needs</p>
+          <div class="big">15 mins</div>
+        </div>
+        <div class="tip-item">
+          <span class="tip-icon">☕</span>
+          <span>Coffee break</span>
+        </div>
+        <div class="tip-item">
+          <span class="tip-icon">🚶</span>
+          <span>Go for a walk</span>
+        </div>
+        <div class="tip-item">
+          <span class="tip-icon">📞</span>
+          <span>Socialize</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════ PATIENT PAGE ══════════════════ -->
+<div class="page" id="page-patient">
+  <div class="page-label">Patient in Coma</div>
+  <nav>
+    <a class="logo" onclick="showPage('page-home')">
+      <svg viewBox="0 0 40 40" fill="none"><ellipse cx="20" cy="20" rx="18" ry="12" stroke="black" stroke-width="2"/><circle cx="20" cy="20" r="5" fill="black"/><path d="M14 26 Q20 32 26 26" stroke="black" stroke-width="1.5" fill="none"/></svg>
+      Alertify/patient
+    </a>
+    <div class="nav-links">
+      <a onclick="showPage('page-home')">Home</a>
+      <a href="#">About Us</a>
+      <a href="#">Contact</a>
+      <div class="search-box"><span>Search in site</span></div>
+    </div>
+  </nav>
+  <div class="hero-bg">
+    <div class="patient-layout">
+      <!-- LEFT -->
+      <div>
+        <div class="face-scan-card">
+          <div class="face-scan-img">
+            <svg class="face-svg" viewBox="0 0 220 280" fill="none">
+              <path d="M20 60 L20 20 L60 20" stroke="#c0392b" stroke-width="3" stroke-linecap="round"/>
+              <path d="M160 20 L200 20 L200 60" stroke="#c0392b" stroke-width="3" stroke-linecap="round"/>
+              <path d="M20 220 L20 260 L60 260" stroke="#c0392b" stroke-width="3" stroke-linecap="round"/>
+              <path d="M160 260 L200 260 L200 220" stroke="#c0392b" stroke-width="3" stroke-linecap="round"/>
+              <ellipse cx="110" cy="100" rx="55" ry="65" fill="#c8843c"/>
+              <ellipse cx="110" cy="80" rx="45" ry="50" fill="#3d2410"/>
+              <circle cx="110" cy="95" r="3" fill="white"/><circle cx="90" cy="105" r="2.5" fill="white"/>
+              <circle cx="130" cy="105" r="2.5" fill="white"/><circle cx="100" cy="120" r="2.5" fill="white"/>
+              <circle cx="120" cy="120" r="2.5" fill="white"/><circle cx="110" cy="130" r="2.5" fill="white"/>
+              <circle cx="85" cy="130" r="2.5" fill="white"/><circle cx="135" cy="130" r="2.5" fill="white"/>
+              <circle cx="95" cy="145" r="2.5" fill="white"/><circle cx="125" cy="145" r="2.5" fill="white"/>
+              <circle cx="110" cy="155" r="2.5" fill="white"/>
+              <line x1="110" y1="95" x2="90" y2="105" stroke="white" stroke-width="1" opacity="0.7"/>
+              <line x1="110" y1="95" x2="130" y2="105" stroke="white" stroke-width="1" opacity="0.7"/>
+              <line x1="90" y1="105" x2="100" y2="120" stroke="white" stroke-width="1" opacity="0.7"/>
+              <line x1="130" y1="105" x2="120" y2="120" stroke="white" stroke-width="1" opacity="0.7"/>
+              <line x1="100" y1="120" x2="110" y2="130" stroke="white" stroke-width="1" opacity="0.7"/>
+              <line x1="120" y1="120" x2="110" y2="130" stroke="white" stroke-width="1" opacity="0.7"/>
+              <rect x="70" y="180" width="80" height="80" rx="8" fill="#e07830"/>
+            </svg>
+          </div>
+        </div>
+
+        <div style="display:flex; gap:16px; margin-top:16px;">
+          <div class="metrics-card" style="flex:1; margin-top:0">
+            <h3>Current Metrics</h3>
+            <p>Hand Movement & BPM</p>
+            <div class="metrics-row">
+              <div class="metric-box">
+                <label>Hand Movement Detec...</label>
+                <div class="val">15 times</div>
+                <div class="delta">5 more than yesterday</div>
+              </div>
+              <div class="metric-box">
+                <label>BPM</label>
+                <div class="val">75 bpm</div>
+              </div>
+            </div>
+          </div>
+          <div class="chart-card">
+            <h4>Hand Movement Over Time</h4>
+            <p>Movements Detected</p>
+            <div class="chart-area">
+              <svg viewBox="0 0 300 80" preserveAspectRatio="none">
+                <defs>
+                  <linearGradient id="chartGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stop-color="#c8a0c8" stop-opacity="0.4"/>
+                    <stop offset="100%" stop-color="#c8a0c8" stop-opacity="0"/>
+                  </linearGradient>
+                </defs>
+                <path d="M0,60 C30,60 40,30 70,40 C100,50 110,20 140,25 C170,30 190,50 220,35 C250,20 270,40 300,30 L300,80 L0,80 Z" fill="url(#chartGrad)"/>
+                <path d="M0,60 C30,60 40,30 70,40 C100,50 110,20 140,25 C170,30 190,50 220,35 C250,20 270,40 300,30" fill="none" stroke="#a070a0" stroke-width="2"/>
+              </svg>
+            </div>
+            <div style="text-align:right; font-size:0.7rem; color:#aaa;">Time</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT -->
+      <div style="display:flex; flex-direction:column; gap:16px;">
+        <div class="ecg-card">
+          <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
+            <span style="color:#aaa; font-size:0.65rem;">II &nbsp; X1 &nbsp; Diagnostic</span>
+            <div style="text-align:right">
+              <div style="color:#aaa; font-size:0.6rem;">ECG bpm</div>
+              <div style="color:#00ff41; font-size:2rem; font-weight:900; line-height:1">80</div>
+            </div>
+          </div>
+          <!-- ECG lines -->
+          <div class="ecg-line">
+            <svg viewBox="0 0 600 40" preserveAspectRatio="none" style="width:200%;height:100%;animation:wave 1.5s linear infinite">
+              <path d="M0,20 L80,20 L90,5 L100,35 L110,5 L120,20 L200,20 L210,5 L220,35 L230,5 L240,20 L320,20 L330,5 L340,35 L350,5 L360,20 L440,20 L450,5 L460,35 L470,5 L480,20 L560,20 L570,5 L580,35 L590,5 L600,20" fill="none" stroke="#00ff41" stroke-width="1.5"/>
+            </svg>
+          </div>
+          <div class="ecg-line">
+            <svg viewBox="0 0 600 40" preserveAspectRatio="none" style="width:200%;height:100%;animation:wave 2s linear infinite">
+              <path d="M0,25 Q50,10 100,25 Q150,40 200,25 Q250,10 300,25 Q350,40 400,25 Q450,10 500,25 Q550,40 600,25" fill="none" stroke="#00cc66" stroke-width="1.5"/>
+            </svg>
+          </div>
+          <div class="ecg-line">
+            <svg viewBox="0 0 600 40" preserveAspectRatio="none" style="width:200%;height:100%;animation:wave 2.5s linear infinite">
+              <path d="M0,20 Q75,5 150,20 Q225,35 300,20 Q375,5 450,20 Q525,35 600,20" fill="none" stroke="#00aaff" stroke-width="1.5"/>
+            </svg>
+          </div>
+          <div class="ecg-nums">
+            <div></div>
+            <div class="ecg-num green"><div class="label">RESP</div><div class="num" style="font-size:1.1rem;">14</div></div>
+            <div></div>
+            <div class="ecg-num cyan"><div class="label">SpO2 %</div><div class="num" style="font-size:1.1rem;">99</div></div>
+            <div></div>
+            <div class="ecg-num yellow"><div class="label">CO2 mmHg</div><div class="num" style="font-size:1.1rem;">38</div></div>
+            <div></div>
+            <div class="ecg-num orange"><div class="label">IBP mmHg</div><div class="num" style="font-size:0.9rem;">120/80</div></div>
+          </div>
+        </div>
+
+        <div class="nurse-card">
+          <div class="nurse-icon">📞</div>
+          <h4>Notifying Nurses for immediate checkup...</h4>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════ DROWSINESS MODAL ══════════════════ -->
+<div class="modal-overlay" id="modal">
+  <div class="modal">
+    <button class="modal-close" onclick="hideModal()">
+      <span>─</span><span>✕</span>
+    </button>
+    <div class="modal-bell">🔔</div>
+    <h2>Drowsiness Detected</h2>
+    <p>We have detected '123' times during the first few '456' minutes.</p>
+    <div class="modal-btns">
+      <button class="modal-btn outline" onclick="hideModal()">Take a break</button>
+      <button class="modal-btn filled" onclick="hideModal()">Proceed</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  function showPage(id) {
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+    window.scrollTo(0, 0);
+  }
+  function showModal() {
+    document.getElementById('modal').classList.add('active');
+  }
+  function hideModal() {
+    document.getElementById('modal').classList.remove('active');
+  }
+  // Auto-show modal after 3s on driver page for demo
+  document.getElementById('page-driver').addEventListener('click', function demoModal() {
+    // don't auto-trigger, let the button do it
+  });
+</script>
+</body>
+</html>

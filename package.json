@@ -1,0 +1,12 @@
+{
+  "dependencies": {
+    "@mediapipe/tasks-audio": "^0.10.34",
+    "@mediapipe/tasks-genai": "^0.10.26",
+    "@mediapipe/tasks-text": "^0.10.34",
+    "@mediapipe/tasks-vision": "^0.10.34",
+    "vite": "^8.0.3"
+  }
+  ,"scripts": {
+    "dev": "vite"
+}
+}
